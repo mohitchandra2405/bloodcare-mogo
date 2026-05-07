@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: bloodcare-nexus-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    autoDeploy: true
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: PORT
+        value: 5000
+      - key: CORS_ORIGINS
+        sync: false
