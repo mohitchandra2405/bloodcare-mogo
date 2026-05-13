@@ -212,6 +212,39 @@ function getLoginDefaults(role) {
     : { role: "donor", email: userDemoCredentials.email, password: userDemoCredentials.password };
 }
 
+function getOfflineDemoUser(role, email, password) {
+  const normalizedRole = String(role || "donor").toLowerCase();
+  const normalizedEmail = String(email || "").toLowerCase();
+
+  if (
+    normalizedRole === "admin" &&
+    normalizedEmail === adminDemoCredentials.email &&
+    password === adminDemoCredentials.password
+  ) {
+    return {
+      id: "admin-demo",
+      name: "Blood Bank Admin",
+      email: adminDemoCredentials.email,
+      role: "admin",
+    };
+  }
+
+  if (
+    normalizedRole !== "admin" &&
+    normalizedEmail === userDemoCredentials.email &&
+    password === userDemoCredentials.password
+  ) {
+    return {
+      id: "donor-demo",
+      name: "Aarav Donor",
+      email: userDemoCredentials.email,
+      role: "donor",
+    };
+  }
+
+  return null;
+}
+
 function getDefaultState(country, locationCatalog) {
   const states = locationCatalog[country] || [];
   return states[0] || "";
@@ -622,7 +655,23 @@ function App() {
         openAuthenticatedPage(pages.users);
       }
     } catch (error) {
-      setNotice(error.message);
+      const demoUser = getOfflineDemoUser(loginForm.role, loginForm.email, loginForm.password);
+
+      if (demoUser) {
+        if (demoUser.role === "admin") {
+          setAdminSession(demoUser);
+          setUserSession(null);
+          setNotice("Backend is offline, so the admin portal is using demo data.");
+          openAuthenticatedPage(pages.admin);
+        } else {
+          setUserSession(demoUser);
+          setAdminSession(null);
+          setNotice("Backend is offline, so the user portal is using demo data.");
+          openAuthenticatedPage(pages.users);
+        }
+      } else {
+        setNotice(error.message);
+      }
     } finally {
       setPortalAuthBusy(false);
     }
@@ -766,7 +815,14 @@ function App() {
       setUserSession(payload.user);
       setNotice(`Welcome to the user portal, ${payload.user.name}.`);
     } catch (error) {
-      setNotice(error.message);
+      const demoUser = getOfflineDemoUser("donor", userLoginForm.email, userLoginForm.password);
+
+      if (demoUser) {
+        setUserSession(demoUser);
+        setNotice("Backend is offline, so the user portal is using demo data.");
+      } else {
+        setNotice(error.message);
+      }
     } finally {
       setUserAuthBusy(false);
     }
@@ -796,7 +852,14 @@ function App() {
       setAdminSession(payload.user);
       setNotice(`Welcome back, ${payload.user.name}.`);
     } catch (error) {
-      setNotice(error.message);
+      const demoUser = getOfflineDemoUser("admin", adminLoginForm.email, adminLoginForm.password);
+
+      if (demoUser) {
+        setAdminSession(demoUser);
+        setNotice("Backend is offline, so the admin portal is using demo data.");
+      } else {
+        setNotice(error.message);
+      }
     } finally {
       setAdminAuthBusy(false);
     }
