@@ -20,8 +20,8 @@ const userDemoCredentials = {
   password: "user123",
 };
 const adminDemoCredentials = {
-  email: "admin@bloodcare.local",
-  password: "admin123",
+  email: "mohitchandra2405@gmail.com",
+  password: "Mohit2405",
 };
 
 const fallbackInventory = [
@@ -222,7 +222,7 @@ function getOfflineDemoUser(role, email, password) {
     password === adminDemoCredentials.password
   ) {
     return {
-      id: "admin-demo",
+      id: adminDemoCredentials.email,
       name: "Blood Bank Admin",
       email: adminDemoCredentials.email,
       role: "admin",

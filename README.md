@@ -263,8 +263,8 @@ Password: hospital123
 ### Admin
 
 ```text
-Email: admin@bloodcare.local
-Password: admin123
+Email: mohitchandra2405@gmail.com
+Password: Mohit2405
 ```
 
 ## Local Run
@@ -359,4 +359,3 @@ BloodCare Nexus helps:
 - Reduce confusion in request approvals
 - Keep a clear view of available and reserved units
 - Support safer and more organized blood bank workflows
-

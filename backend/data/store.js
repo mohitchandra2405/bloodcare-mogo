@@ -37,10 +37,10 @@ const users = [
     organization: "Global Relief Hospital",
   },
   {
-    id: "admin-1",
+    id: "mohitchandra2405@gmail.com",
     name: "Blood Bank Admin",
-    email: "admin@bloodcare.local",
-    password: "admin123",
+    email: "mohitchandra2405@gmail.com",
+    password: "Mohit2405",
     role: "admin",
   },
 ];
