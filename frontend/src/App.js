@@ -23,6 +23,7 @@ const adminDemoCredentials = {
   email: "mohitchandra2405@gmail.com",
   password: "Mohit2405",
 };
+const offlineStorageKey = "bloodcare-nexus-offline-demo-v1";
 
 const fallbackInventory = [
   { type: "A+", units: 42, reserved: 8, status: "Stable" },
@@ -261,6 +262,111 @@ async function fetchJson(url, options) {
   return data;
 }
 
+function getStockStatus(units) {
+  if (Number(units || 0) <= 10) return "Critical";
+  if (Number(units || 0) <= 18) return "Watch";
+  return "Stable";
+}
+
+function getOfflineData() {
+  try {
+    const raw = window.localStorage.getItem(offlineStorageKey);
+    const parsed = raw ? JSON.parse(raw) : null;
+
+    if (!parsed || !Array.isArray(parsed.requests)) {
+      return null;
+    }
+
+    return {
+      inventory: Array.isArray(parsed.inventory) ? parsed.inventory : fallbackInventory,
+      donors: Array.isArray(parsed.donors) ? parsed.donors : fallbackDonors,
+      requests: parsed.requests,
+      locationCatalog: parsed.locationCatalog || fallbackLocations,
+    };
+  } catch (error) {
+    return null;
+  }
+}
+
+function saveOfflineData(data) {
+  try {
+    window.localStorage.setItem(offlineStorageKey, JSON.stringify(data));
+  } catch (error) {
+    // Local storage can be unavailable in some restricted browser modes.
+  }
+}
+
+function createOfflineRequest(form, userSession) {
+  const createdAt = new Date().toISOString();
+  const units = Math.max(1, Number(form.units || 1));
+
+  return {
+    id: `RQ-DEMO-${Date.now().toString().slice(-6)}`,
+    patient: form.patient || "Blood support request",
+    hospital: form.hospital || "User submitted request",
+    bloodGroup: form.bloodGroup,
+    units,
+    urgency: form.urgency,
+    country: form.country,
+    state: form.state,
+    city: form.city,
+    status: "Pending",
+    eta: form.urgency === "Emergency" ? "Urgent review" : "Awaiting review",
+    requestedByName: userSession?.name || "Portal User",
+    requestedByEmail: userSession?.email || null,
+    createdAt,
+    updatedAt: createdAt,
+  };
+}
+
+function updateOfflineInventory(inventory, request, nextStatus) {
+  if (!request) {
+    return inventory;
+  }
+
+  return inventory.map((item) => {
+    if (item.type !== request.bloodGroup) {
+      return item;
+    }
+
+    let units = Number(item.units || 0);
+    let reserved = Number(item.reserved || 0);
+    const requestedUnits = Number(request.units || 0);
+
+    if (nextStatus === "Approved" && request.status === "Pending") {
+      reserved += requestedUnits;
+    }
+
+    if (nextStatus === "Rejected" && request.status === "Approved") {
+      reserved = Math.max(0, reserved - requestedUnits);
+    }
+
+    if (nextStatus === "Completed" && request.status === "Approved") {
+      reserved = Math.max(0, reserved - requestedUnits);
+      units = Math.max(0, units - requestedUnits);
+    }
+
+    return {
+      ...item,
+      units,
+      reserved,
+      status: getStockStatus(units),
+    };
+  });
+}
+
+function getOfflineRequestNotice(request, nextStatus) {
+  if (nextStatus === "Approved") {
+    return `Request ${request.id} approved in demo mode and stock reserved.`;
+  }
+
+  if (nextStatus === "Rejected") {
+    return `Request ${request.id} rejected in demo mode.`;
+  }
+
+  return `Request ${request.id} completed in demo mode.`;
+}
+
 function formatLocation(entry) {
   return [entry.city, entry.state, entry.country].filter(Boolean).join(", ");
 }
@@ -475,7 +581,21 @@ function App() {
         setErrorMessage("");
       } catch (error) {
         if (active) {
-          setErrorMessage("Backend or MongoDB is not reachable right now. Showing the seeded experience for now.");
+          const offlineData = getOfflineData() || {
+            inventory: fallbackInventory,
+            donors: fallbackDonors,
+            requests: fallbackRequests,
+            locationCatalog: fallbackLocations,
+          };
+
+          setInventory(offlineData.inventory);
+          setDonors(offlineData.donors);
+          setRequests(offlineData.requests);
+          setLocationCatalog(offlineData.locationCatalog);
+          saveOfflineData(offlineData);
+          setErrorMessage(
+            "Online database is not connected. Demo mode saves requests in this browser for admin approval."
+          );
         }
       } finally {
         if (active) {
@@ -730,7 +850,26 @@ function App() {
       }));
       setNotice(`Request ${request.id} sent successfully. The admin can now approve it from the admin portal.`);
     } catch (error) {
-      setNotice(error.message);
+      const request = createOfflineRequest(requestForm, userSession);
+      const nextRequests = [request, ...requests];
+
+      setRequests(nextRequests);
+      saveOfflineData({
+        inventory,
+        donors,
+        requests: nextRequests,
+        locationCatalog,
+      });
+      setRequestForm((current) => ({
+        ...current,
+        patient: "",
+        hospital: "",
+        units: "1",
+        urgency: "High",
+        city: "",
+      }));
+      setErrorMessage("Online database is not connected. Demo mode saves requests in this browser for admin approval.");
+      setNotice(`Request ${request.id} saved. Login as admin to approve or reject it.`);
     }
   };
 
@@ -767,7 +906,39 @@ function App() {
           : `Request ${payload.request.id} marked as completed.`
       );
     } catch (error) {
-      setNotice(error.message);
+      const targetRequest = requests.find((request) => request.id === requestId);
+
+      if (!targetRequest) {
+        setNotice(error.message);
+        return;
+      }
+
+      const updatedRequest = {
+        ...targetRequest,
+        status: nextStatus,
+        eta:
+          nextStatus === "Approved"
+            ? "Reserved"
+            : nextStatus === "Completed"
+              ? "Completed"
+              : nextStatus === "Rejected"
+                ? "Closed"
+                : targetRequest.eta,
+        updatedAt: new Date().toISOString(),
+      };
+      const nextRequests = requests.map((request) => (request.id === requestId ? updatedRequest : request));
+      const nextInventory = updateOfflineInventory(inventory, targetRequest, nextStatus);
+
+      setRequests(nextRequests);
+      setInventory(nextInventory);
+      saveOfflineData({
+        inventory: nextInventory,
+        donors,
+        requests: nextRequests,
+        locationCatalog,
+      });
+      setErrorMessage("Online database is not connected. Demo mode saves admin decisions in this browser.");
+      setNotice(getOfflineRequestNotice(updatedRequest, nextStatus));
     } finally {
       setRequestBusyId("");
     }
