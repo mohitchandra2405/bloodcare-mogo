@@ -925,6 +925,79 @@ main {
   color: var(--green);
 }
 
+.submission-popup {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 20;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  width: min(420px, calc(100vw - 36px));
+  padding: 16px;
+  border: 1px solid rgba(21, 128, 61, 0.28);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  box-shadow: 0 20px 52px rgba(20, 35, 65, 0.18);
+}
+
+.submission-popup strong {
+  color: var(--green);
+  font-size: 1rem;
+}
+
+.submission-popup p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.submission-popup button {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--soft-red);
+  color: var(--red-dark);
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.donor-info-panel,
+.guidance-block {
+  display: grid;
+  gap: 16px;
+}
+
+.guidance-block {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfdff;
+}
+
+.guidance-block > strong {
+  color: var(--ink);
+  font-size: 1.02rem;
+}
+
+.note-list.flush {
+  margin-top: 0;
+}
+
+.centre-row {
+  align-items: flex-start;
+}
+
+.centre-row strong {
+  max-width: 150px;
+  color: var(--red-dark);
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
 .eligibility-panel {
   display: grid;
   gap: 16px;

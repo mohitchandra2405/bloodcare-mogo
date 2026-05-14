@@ -185,6 +185,27 @@ const donationSupportItems = [
   "Wait at least 12 weeks between whole-blood donations unless your centre advises otherwise.",
   "Report recent illness, medication, or travel during screening.",
 ];
+const donationRules = [
+  "Donor should generally be between 18 and 65 years old.",
+  "Minimum body weight should be 50 kg.",
+  "Do not donate while having fever, recent illness, or active infection.",
+  "Inform the centre about medicines, surgery, travel, or medical conditions before donation.",
+  "Eat food and drink water before donating blood.",
+];
+const donationCentres = [
+  { name: "Bengaluru Central Blood Centre", country: "India", state: "Karnataka", city: "Bengaluru", phone: "+91 80 2244 1100" },
+  { name: "Victoria Hospital Blood Bank", country: "India", state: "Karnataka", city: "Bangalore", phone: "+91 80 2670 1150" },
+  { name: "Mysuru Red Cross Blood Centre", country: "India", state: "Karnataka", city: "Mysuru", phone: "+91 821 242 3050" },
+  { name: "Delhi Regional Blood Centre", country: "India", state: "Delhi", city: "Delhi", phone: "+91 11 2335 9000" },
+  { name: "Mumbai Metro Blood Centre", country: "India", state: "Maharashtra", city: "Mumbai", phone: "+91 22 2410 2000" },
+  { name: "Chennai Government Blood Bank", country: "India", state: "Tamil Nadu", city: "Chennai", phone: "+91 44 2530 5000" },
+  { name: "Hyderabad LifeLine Blood Centre", country: "India", state: "Telangana", city: "Hyderabad", phone: "+91 40 2345 8800" },
+  { name: "London North Blood Centre", country: "United Kingdom", state: "England", city: "London", phone: "+44 20 7946 0101" },
+  { name: "New York Community Blood Center", country: "United States", state: "New York", city: "New York", phone: "+1 212 570 3000" },
+  { name: "Tokyo Metropolitan Blood Centre", country: "Japan", state: "Tokyo", city: "Tokyo", phone: "+81 3 5272 3523" },
+  { name: "Sydney Central Donation Centre", country: "Australia", state: "New South Wales", city: "Sydney", phone: "+61 2 9234 5600" },
+  { name: "Nairobi National Blood Centre", country: "Kenya", state: "Nairobi County", city: "Nairobi", phone: "+254 20 272 4472" },
+];
 
 const adminControlNotes = [
   "Verify patient match, blood group, and unit count before approval.",
@@ -296,6 +317,37 @@ function saveOfflineData(data) {
   }
 }
 
+function createOfflineDonor(form) {
+  const createdAt = new Date().toISOString();
+  const eligible =
+    Number(form.age || 0) >= 18 &&
+    Number(form.age || 0) <= 65 &&
+    Number(form.weight || 0) >= 50 &&
+    form.hasRecentIllness === "No" &&
+    form.onMedication === "No";
+
+  return {
+    id: `DN-DEMO-${Date.now().toString().slice(-6)}`,
+    name: form.name,
+    age: Number(form.age || 0),
+    bloodGroup: form.bloodGroup,
+    country: form.country,
+    state: form.state,
+    city: form.city,
+    phone: form.phone,
+    weight: Number(form.weight || 0),
+    hasRecentIllness: form.hasRecentIllness === "Yes",
+    onMedication: form.onMedication === "Yes",
+    lastDonation: form.lastDonation,
+    eligible,
+    donationHistory: form.lastDonation
+      ? [{ date: form.lastDonation, location: `${form.city || form.state} donor self-report`, units: 1 }]
+      : [],
+    createdAt,
+    updatedAt: createdAt,
+  };
+}
+
 function createOfflineRequest(form, userSession) {
   const createdAt = new Date().toISOString();
   const units = Math.max(1, Number(form.units || 1));
@@ -365,6 +417,30 @@ function getOfflineRequestNotice(request, nextStatus) {
   }
 
   return `Request ${request.id} completed in demo mode.`;
+}
+
+function getNearestDonationCentres(form) {
+  const country = String(form.country || "").toLowerCase();
+  const state = String(form.state || "").toLowerCase();
+  const city = String(form.city || "").toLowerCase();
+
+  const ranked = donationCentres
+    .map((centre) => {
+      const centreCity = centre.city.toLowerCase();
+      const centreState = centre.state.toLowerCase();
+      const centreCountry = centre.country.toLowerCase();
+      let score = 0;
+
+      if (centreCountry === country) score += 4;
+      if (centreState === state) score += 3;
+      if (city && (centreCity === city || centreCity.includes(city) || city.includes(centreCity))) score += 5;
+
+      return { ...centre, score };
+    })
+    .filter((centre) => centre.score > 0)
+    .sort((left, right) => right.score - left.score || left.name.localeCompare(right.name));
+
+  return (ranked.length ? ranked : donationCentres).slice(0, 3);
 }
 
 function formatLocation(entry) {
@@ -510,6 +586,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [notice, setNotice] = useState("");
+  const [popupMessage, setPopupMessage] = useState("");
   const [requestBusyId, setRequestBusyId] = useState("");
   const [inventoryBusy, setInventoryBusy] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState("");
@@ -621,6 +698,15 @@ function App() {
   }, [notice]);
 
   useEffect(() => {
+    if (!popupMessage) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => setPopupMessage(""), 4800);
+    return () => window.clearTimeout(timeoutId);
+  }, [popupMessage]);
+
+  useEffect(() => {
     const nextState = getDefaultState(donorForm.country, locationCatalog);
     if (nextState && !locationCatalog[donorForm.country]?.includes(donorForm.state)) {
       setDonorForm((current) => ({ ...current, state: nextState }));
@@ -637,6 +723,7 @@ function App() {
   const countries = useMemo(() => Object.keys(locationCatalog), [locationCatalog]);
   const donorStates = locationCatalog[donorForm.country] || [];
   const requestStates = locationCatalog[requestForm.country] || [];
+  const nearestCentres = useMemo(() => getNearestDonationCentres(donorForm), [donorForm]);
   const totalUnits = inventory.reduce((sum, item) => sum + Number(item.units || 0), 0);
   const eligibleDonors = donors.filter((donor) => donor.eligible).length;
   const activeRequests = requests.filter((request) => ["Pending", "Approved"].includes(request.status)).length;
@@ -820,8 +907,32 @@ function App() {
         lastDonation: "",
       }));
       setNotice(`Saved successfully. ${donor.name} is now registered in MongoDB.`);
+      setPopupMessage(`${donor.name} submitted successfully. Review the donation rules and visit a nearest listed centre.`);
     } catch (error) {
-      setNotice(error.message);
+      const donor = createOfflineDonor(donorForm);
+      const nextDonors = [donor, ...donors];
+
+      setDonors(nextDonors);
+      saveOfflineData({
+        inventory,
+        donors: nextDonors,
+        requests,
+        locationCatalog,
+      });
+      setDonorForm((current) => ({
+        ...current,
+        name: "",
+        age: "",
+        city: "",
+        phone: "",
+        weight: "",
+        hasRecentIllness: "No",
+        onMedication: "No",
+        lastDonation: "",
+      }));
+      setErrorMessage("Online database is not connected. Demo mode saves donor registrations in this browser.");
+      setNotice(`${donor.name} saved in demo mode.`);
+      setPopupMessage(`${donor.name} submitted successfully. Review the donation rules and visit a nearest listed centre.`);
     }
   };
 
@@ -1048,6 +1159,8 @@ function App() {
     loading,
     errorMessage,
     notice,
+    popupMessage,
+    setPopupMessage,
   };
 
   const shouldShowPortalLogin =
@@ -1115,6 +1228,7 @@ function App() {
       donorForm={donorForm}
       setDonorForm={setDonorForm}
       donorStates={donorStates}
+      nearestCentres={nearestCentres}
       requestForm={requestForm}
       setRequestForm={setRequestForm}
       requestStates={requestStates}
@@ -1268,6 +1382,8 @@ function UsersPage({
   loading,
   errorMessage,
   notice,
+  popupMessage,
+  setPopupMessage,
   userSession,
   userLoginForm,
   setUserLoginForm,
@@ -1282,6 +1398,7 @@ function UsersPage({
   donorForm,
   setDonorForm,
   donorStates,
+  nearestCentres,
   requestForm,
   setRequestForm,
   requestStates,
@@ -1480,6 +1597,7 @@ function UsersPage({
 
       <main>
         <StatusStack loading={loading} errorMessage={errorMessage} notice={notice} />
+        {popupMessage ? <SubmissionPopup message={popupMessage} onClose={() => setPopupMessage("")} /> : null}
 
         <section className="stats-grid" aria-label="User summary">
           <Metric icon={<Icon label="U" />} label="Available Units" value={totalUnits} tone="red" />
@@ -1763,6 +1881,41 @@ function UsersPage({
                 <Icon label="+" /> Save Donor
               </button>
             </form>
+          </article>
+
+          <article className="panel donor-info-panel">
+            <div className="section-heading compact">
+              <div>
+                <p className="eyebrow">Donation Guidance</p>
+                <h2>Rules and nearest centres</h2>
+              </div>
+              <Icon label="C" />
+            </div>
+
+            <div className="guidance-block">
+              <strong>Rules before donating blood</strong>
+              <ul className="note-list flush">
+                {donationRules.map((rule) => (
+                  <li key={rule}>{rule}</li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="guidance-block">
+              <strong>Nearest donation centres</strong>
+              <div className="stack-list">
+                {nearestCentres.map((centre) => (
+                  <div className="tech-row centre-row" key={`${centre.name}-${centre.city}`}>
+                    <span>
+                      {centre.name}
+                      <br />
+                      <small>{centre.city}, {centre.state}, {centre.country}</small>
+                    </span>
+                    <strong>{centre.phone}</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
           </article>
 
           <article className="panel" id="user-request">
@@ -2757,6 +2910,20 @@ function StatusStack({ loading, errorMessage, notice }) {
       </div>
       {notice ? <div className="notice-banner success">{notice}</div> : null}
     </section>
+  );
+}
+
+function SubmissionPopup({ message, onClose }) {
+  return (
+    <div className="submission-popup" role="status" aria-live="polite">
+      <div>
+        <strong>Submitted successfully</strong>
+        <p>{message}</p>
+      </div>
+      <button type="button" onClick={onClose} aria-label="Close submitted message">
+        x
+      </button>
+    </div>
   );
 }
 
