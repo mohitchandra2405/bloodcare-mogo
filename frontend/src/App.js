@@ -960,6 +960,7 @@ function App() {
         city: "",
       }));
       setNotice(`Request ${request.id} sent successfully. The admin can now approve it from the admin portal.`);
+      setPopupMessage(`Blood request ${request.id} submitted successfully. You will soon get a message whether it is accepted or rejected.`);
     } catch (error) {
       const request = createOfflineRequest(requestForm, userSession);
       const nextRequests = [request, ...requests];
@@ -981,6 +982,7 @@ function App() {
       }));
       setErrorMessage("Online database is not connected. Demo mode saves requests in this browser for admin approval.");
       setNotice(`Request ${request.id} saved. Login as admin to approve or reject it.`);
+      setPopupMessage(`Blood request ${request.id} submitted successfully. You will soon get a message whether it is accepted or rejected.`);
     }
   };
 
