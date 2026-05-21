@@ -47,6 +47,17 @@ const fallbackLocations = {
   "United States": ["California", "Illinois", "New York", "Texas", "Washington"],
 };
 
+const countryMapPoints = {
+  Australia: { x: 80, y: 72 },
+  Brazil: { x: 35, y: 67 },
+  Germany: { x: 53, y: 36 },
+  India: { x: 67, y: 50 },
+  Japan: { x: 84, y: 42 },
+  Kenya: { x: 55, y: 61 },
+  "United Kingdom": { x: 44, y: 27 },
+  "United States": { x: 20, y: 39 },
+};
+
 const fallbackDonors = [
   {
     id: "DN-1001",
@@ -114,6 +125,111 @@ const fallbackDonors = [
     lastDonation: "2026-03-02",
     eligible: true,
     donationHistory: [{ date: "2026-03-02", location: "London North Bank", units: 1 }],
+  },
+  {
+    id: "DN-1005",
+    name: "Noah Bennett",
+    age: 31,
+    bloodGroup: "A+",
+    country: "United States",
+    state: "New York",
+    city: "New York",
+    phone: "+1 212 555 0198",
+    weight: 80,
+    hasRecentIllness: false,
+    onMedication: false,
+    lastDonation: "2026-02-09",
+    eligible: true,
+    donationHistory: [
+      { date: "2026-02-09", location: "New York Community Blood Center", units: 1 },
+      { date: "2025-09-12", location: "Queens Donation Drive", units: 1 },
+    ],
+  },
+  {
+    id: "DN-1006",
+    name: "Hana Sato",
+    age: 26,
+    bloodGroup: "B+",
+    country: "Japan",
+    state: "Tokyo",
+    city: "Tokyo",
+    phone: "+81 90 1234 5606",
+    weight: 54,
+    hasRecentIllness: false,
+    onMedication: false,
+    lastDonation: "2026-01-26",
+    eligible: true,
+    donationHistory: [{ date: "2026-01-26", location: "Tokyo Metropolitan Blood Centre", units: 1 }],
+  },
+  {
+    id: "DN-1007",
+    name: "Olivia Hughes",
+    age: 37,
+    bloodGroup: "AB+",
+    country: "Australia",
+    state: "New South Wales",
+    city: "Sydney",
+    phone: "+61 412 555 107",
+    weight: 62,
+    hasRecentIllness: false,
+    onMedication: false,
+    lastDonation: "2026-03-14",
+    eligible: true,
+    donationHistory: [
+      { date: "2026-03-14", location: "Sydney Central Donation Centre", units: 1 },
+      { date: "2025-11-02", location: "Parramatta Blood Drive", units: 1 },
+    ],
+  },
+  {
+    id: "DN-1008",
+    name: "Lucas Silva",
+    age: 33,
+    bloodGroup: "A-",
+    country: "Brazil",
+    state: "Sao Paulo",
+    city: "Sao Paulo",
+    phone: "+55 11 95555 1008",
+    weight: 72,
+    hasRecentIllness: false,
+    onMedication: false,
+    lastDonation: "2026-02-22",
+    eligible: true,
+    donationHistory: [{ date: "2026-02-22", location: "Sao Paulo Hemocentre", units: 1 }],
+  },
+  {
+    id: "DN-1009",
+    name: "Lena Fischer",
+    age: 42,
+    bloodGroup: "O-",
+    country: "Germany",
+    state: "Berlin",
+    city: "Berlin",
+    phone: "+49 30 5555 1009",
+    weight: 66,
+    hasRecentIllness: false,
+    onMedication: false,
+    lastDonation: "2026-04-03",
+    eligible: true,
+    donationHistory: [
+      { date: "2026-04-03", location: "Berlin Blood Service", units: 1 },
+      { date: "2025-12-18", location: "Charite Donation Camp", units: 1 },
+    ],
+  },
+  {
+    id: "DN-1010",
+    name: "Amina Otieno",
+    age: 30,
+    bloodGroup: "B-",
+    country: "Kenya",
+    state: "Nairobi County",
+    city: "Nairobi",
+    phone: "+254 700 555 110",
+    weight: 60,
+    hasRecentIllness: false,
+    onMedication: false,
+    lastDonation: "2026-01-12",
+    eligible: true,
+    donationHistory: [{ date: "2026-01-12", location: "Nairobi National Blood Centre", units: 1 }],
   },
 ];
 
@@ -487,6 +603,8 @@ function buildCoverageData(donors, requests) {
       countries.set(country, {
         country,
         donors: 0,
+        donations: 0,
+        donatedUnits: 0,
         eligibleDonors: 0,
         recipients: 0,
         requestedUnits: 0,
@@ -508,6 +626,8 @@ function buildCoverageData(donors, requests) {
       countryEntry.states.set(stateKey, {
         state: stateKey,
         donors: 0,
+        donations: 0,
+        donatedUnits: 0,
         recipients: 0,
         requestedUnits: 0,
         cities: new Set(),
@@ -529,12 +649,20 @@ function buildCoverageData(donors, requests) {
     }
 
     countryEntry.donors += 1;
+    const donationHistory = Array.isArray(donor.donationHistory) ? donor.donationHistory : [];
+    const donationEntries = donationHistory.length ? donationHistory : donor.lastDonation ? [{ units: 1 }] : [];
+    const donationCount = donationEntries.length;
+    const donatedUnits = donationEntries.reduce((sum, entry) => sum + Number(entry.units || 1), 0);
+    countryEntry.donations += donationCount;
+    countryEntry.donatedUnits += donatedUnits;
     if (donor.eligible) {
       countryEntry.eligibleDonors += 1;
     }
 
     const stateEntry = ensureState(countryEntry, donor.state, donor.city);
     stateEntry.donors += 1;
+    stateEntry.donations += donationCount;
+    stateEntry.donatedUnits += donatedUnits;
   });
 
   requests.forEach((request) => {
@@ -565,13 +693,15 @@ function buildCoverageData(donors, requests) {
         }))
         .sort(
           (left, right) =>
-            right.recipients + right.donors - (left.recipients + left.donors) ||
+            right.donations + right.recipients + right.donors -
+              (left.donations + left.recipients + left.donors) ||
             left.state.localeCompare(right.state)
         ),
     }))
     .sort(
       (left, right) =>
-        right.donors + right.recipients - (left.donors + left.recipients) ||
+        right.donations + right.donors + right.recipients -
+          (left.donations + left.donors + left.recipients) ||
         left.country.localeCompare(right.country)
     );
 }
@@ -1608,6 +1738,17 @@ function UsersPage({
           <Metric icon={<Icon label="Q" />} label="Open Requests" value={activeRequests} tone="amber" />
         </section>
 
+        <RegionalCoverageSection
+          eyebrow="World Donation Map"
+          title="Donations completed by country"
+          pill="Click a country marker to zoom and view state donation totals"
+          detailHeading="Zoomed country"
+          coverageData={coverageData}
+          selectedCountry={selectedCountry}
+          setSelectedCountry={setSelectedCountry}
+          selectedCountryData={selectedCountryData}
+        />
+
         <section className="dashboard-grid">
           <article className="panel wide">
             <div className="section-heading">
@@ -2022,17 +2163,6 @@ function UsersPage({
             </form>
           </article>
         </section>
-
-        <RegionalCoverageSection
-          eyebrow="Regional Coverage"
-          title="Live donor and recipient coverage"
-          pill="Regional totals match the same live donor and request records"
-          detailHeading="Country coverage"
-          coverageData={coverageData}
-          selectedCountry={selectedCountry}
-          setSelectedCountry={setSelectedCountry}
-          selectedCountryData={selectedCountryData}
-        />
 
         <section className="panel table-panel" id="user-profiles">
           <div className="section-heading">
@@ -2724,6 +2854,94 @@ function AdminPage({
   );
 }
 
+function WorldDonationMap({ coverageData, selectedCountryData, setSelectedCountry }) {
+  const visibleCountries = coverageData.filter((entry) => countryMapPoints[entry.country]);
+  const selectedPoint = selectedCountryData ? countryMapPoints[selectedCountryData.country] : null;
+  const maxDonations = Math.max(1, ...visibleCountries.map((entry) => entry.donations || 0));
+  const totalDonations = coverageData.reduce((sum, entry) => sum + entry.donations, 0);
+  const totalUnits = coverageData.reduce((sum, entry) => sum + entry.donatedUnits, 0);
+  const zoomStyle = selectedPoint
+    ? {
+        transformOrigin: `${selectedPoint.x}% ${selectedPoint.y}%`,
+        transform: "scale(1.38)",
+      }
+    : undefined;
+
+  return (
+    <div className="donation-map-shell">
+      <div className="world-map-viewport" aria-label="World map showing completed blood donations by country">
+        <div className="world-map-zoom" style={zoomStyle}>
+          <svg className="world-map-svg" viewBox="0 0 1000 520" role="img" aria-hidden="true">
+            <rect className="map-ocean" x="0" y="0" width="1000" height="520" rx="22" />
+            <path
+              className="map-land"
+              d="M96 178 143 129 223 126 277 164 254 215 192 226 154 269 93 250 62 208z"
+            />
+            <path className="map-land" d="M242 282 305 300 348 363 329 442 279 474 238 421 218 354z" />
+            <path
+              className="map-land"
+              d="M414 135 500 105 607 125 681 173 653 228 558 219 510 250 428 226 383 181z"
+            />
+            <path className="map-land" d="M512 260 609 251 673 315 637 414 559 425 506 357z" />
+            <path
+              className="map-land"
+              d="M658 207 775 206 875 257 850 326 742 332 679 293 625 250z"
+            />
+            <path className="map-land" d="M770 365 875 368 930 421 890 479 780 458 735 408z" />
+            <path className="map-land small" d="M459 88 498 75 534 95 506 119 463 113z" />
+            <path className="map-land small" d="M825 159 853 141 884 158 870 189 838 190z" />
+          </svg>
+
+          <div className="map-marker-layer">
+            {visibleCountries.map((entry) => {
+              const point = countryMapPoints[entry.country];
+              const isActive = selectedCountryData?.country === entry.country;
+              const size = 34 + Math.round(((entry.donations || 0) / maxDonations) * 18);
+
+              return (
+                <button
+                  className={`map-marker ${isActive ? "active" : ""}`}
+                  key={`map-${entry.country}`}
+                  style={{
+                    left: `${point.x}%`,
+                    top: `${point.y}%`,
+                    "--marker-size": `${size}px`,
+                  }}
+                  type="button"
+                  onClick={() => setSelectedCountry(entry.country)}
+                  aria-label={`${entry.country}: ${entry.donations} completed donations`}
+                >
+                  <span className="map-marker-dot">{entry.donations}</span>
+                  <span className="map-marker-label">
+                    <strong>{entry.country}</strong>
+                    <small>{entry.donations} donations completed</small>
+                    <small>{entry.donatedUnits} units donated</small>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className="map-summary-strip">
+        <span>
+          <strong>{totalDonations}</strong>
+          Donations completed
+        </span>
+        <span>
+          <strong>{totalUnits}</strong>
+          Units donated
+        </span>
+        <span>
+          <strong>{selectedCountryData ? selectedCountryData.country : "Select country"}</strong>
+          Current zoom
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function RegionalCoverageSection({
   eyebrow,
   title,
@@ -2744,6 +2962,12 @@ function RegionalCoverageSection({
           </div>
           <span className="data-pill">{pill}</span>
         </div>
+
+        <WorldDonationMap
+          coverageData={coverageData}
+          selectedCountryData={selectedCountryData}
+          setSelectedCountry={setSelectedCountry}
+        />
 
         <div className="coverage-toolbar">
           <label>
@@ -2766,8 +2990,8 @@ function RegionalCoverageSection({
               <strong>{coverageData.length}</strong>
             </article>
             <article className="mini-stat-card">
-              <span>States</span>
-              <strong>{coverageData.reduce((sum, entry) => sum + entry.states.length, 0)}</strong>
+              <span>Donations</span>
+              <strong>{coverageData.reduce((sum, entry) => sum + entry.donations, 0)}</strong>
             </article>
           </div>
         </div>
@@ -2786,20 +3010,20 @@ function RegionalCoverageSection({
                   <span>{entry.states.length} states or provinces tracked</span>
                 </div>
                 <div className="coverage-kpi">
+                  <span>Donations</span>
+                  <strong>{entry.donations}</strong>
+                </div>
+                <div className="coverage-kpi">
+                  <span>Units Donated</span>
+                  <strong>{entry.donatedUnits}</strong>
+                </div>
+                <div className="coverage-kpi">
                   <span>Donors</span>
                   <strong>{entry.donors}</strong>
                 </div>
                 <div className="coverage-kpi">
-                  <span>Recipients</span>
+                  <span>Requests</span>
                   <strong>{entry.recipients}</strong>
-                </div>
-                <div className="coverage-kpi">
-                  <span>Units</span>
-                  <strong>{entry.requestedUnits}</strong>
-                </div>
-                <div className="coverage-kpi">
-                  <span>Eligible</span>
-                  <strong>{entry.eligibleDonors}</strong>
                 </div>
               </button>
             ))
@@ -2821,20 +3045,20 @@ function RegionalCoverageSection({
           <>
             <div className="country-summary-grid">
               <div className="country-summary-card">
+                <span>Donations</span>
+                <strong>{selectedCountryData.donations}</strong>
+              </div>
+              <div className="country-summary-card">
+                <span>Units Donated</span>
+                <strong>{selectedCountryData.donatedUnits}</strong>
+              </div>
+              <div className="country-summary-card">
                 <span>Donors</span>
                 <strong>{selectedCountryData.donors}</strong>
               </div>
               <div className="country-summary-card">
-                <span>Recipients</span>
+                <span>Requests</span>
                 <strong>{selectedCountryData.recipients}</strong>
-              </div>
-              <div className="country-summary-card">
-                <span>Units Requested</span>
-                <strong>{selectedCountryData.requestedUnits}</strong>
-              </div>
-              <div className="country-summary-card">
-                <span>Eligible Donors</span>
-                <strong>{selectedCountryData.eligibleDonors}</strong>
               </div>
             </div>
 
@@ -2845,9 +3069,9 @@ function RegionalCoverageSection({
                     <strong>{stateEntry.state}</strong>
                     <span>{stateEntry.cities.join(", ") || "No cities logged yet"}</span>
                   </div>
+                  <small>{stateEntry.donations} donations</small>
+                  <small>{stateEntry.donatedUnits} donated units</small>
                   <small>{stateEntry.donors} donors</small>
-                  <small>{stateEntry.recipients} recipients</small>
-                  <small>{stateEntry.requestedUnits} units</small>
                 </div>
               ))}
             </div>
