@@ -767,10 +767,10 @@ main {
 .world-map-viewport {
   position: relative;
   overflow: hidden;
-  min-height: 360px;
+  min-height: 430px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #f8fbff;
+  background: #eef6ff;
 }
 
 .world-map-zoom {
@@ -786,17 +786,32 @@ main {
 }
 
 .map-ocean {
-  fill: #eef5ff;
+  fill: url("#mapOcean");
+}
+
+.map-grid-lines path {
+  fill: none;
+  stroke: rgba(20, 86, 163, 0.12);
+  stroke-dasharray: 6 8;
+  stroke-width: 1.4;
 }
 
 .map-land {
-  fill: #dfe8f4;
-  stroke: #cbd7e6;
-  stroke-width: 2;
+  fill: #d9e5f1;
+  stroke: #9fb4ca;
+  stroke-width: 2.4;
 }
 
 .map-land.small {
-  fill: #e7eef8;
+  fill: #e5eef8;
+}
+
+.map-continent-label {
+  fill: rgba(28, 46, 76, 0.42);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-anchor: middle;
 }
 
 .map-marker-layer {
@@ -848,12 +863,17 @@ main {
   padding: 9px 10px;
   border: 1px solid rgba(153, 27, 47, 0.16);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.94);
+  background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 14px 32px rgba(20, 35, 65, 0.1);
-  opacity: 0;
+  opacity: 1;
   pointer-events: none;
-  transform: translateY(-50%) translateX(-4px);
-  transition: opacity 180ms ease, transform 180ms ease;
+  transform: translateY(-50%);
+  transition: box-shadow 180ms ease, transform 180ms ease;
+}
+
+.map-marker[data-side="left"] .map-marker-label {
+  right: calc(100% + 8px);
+  left: auto;
 }
 
 .map-marker-label strong {
@@ -874,12 +894,12 @@ main {
 .map-marker.active .map-marker-label {
   border-color: rgba(20, 86, 163, 0.35);
   background: white;
+  box-shadow: 0 16px 34px rgba(20, 86, 163, 0.16);
 }
 
 .map-marker.active .map-marker-label,
 .map-marker:hover .map-marker-label {
-  opacity: 1;
-  transform: translateY(-50%) translateX(0);
+  transform: translateY(-50%) scale(1.03);
 }
 
 .map-summary-strip {

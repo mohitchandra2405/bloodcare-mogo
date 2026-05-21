@@ -48,14 +48,14 @@ const fallbackLocations = {
 };
 
 const countryMapPoints = {
-  Australia: { x: 80, y: 72 },
-  Brazil: { x: 35, y: 67 },
-  Germany: { x: 53, y: 36 },
-  India: { x: 67, y: 50 },
-  Japan: { x: 84, y: 42 },
-  Kenya: { x: 55, y: 61 },
-  "United Kingdom": { x: 44, y: 27 },
-  "United States": { x: 20, y: 39 },
+  Australia: { x: 80, y: 73, labelSide: "left" },
+  Brazil: { x: 34, y: 68, labelSide: "right" },
+  Germany: { x: 52, y: 35, labelSide: "right" },
+  India: { x: 68, y: 52, labelSide: "right" },
+  Japan: { x: 85, y: 42, labelSide: "left" },
+  Kenya: { x: 56, y: 63, labelSide: "right" },
+  "United Kingdom": { x: 44, y: 28, labelSide: "left" },
+  "United States": { x: 20, y: 40, labelSide: "right" },
 };
 
 const fallbackDonors = [
@@ -2872,24 +2872,54 @@ function WorldDonationMap({ coverageData, selectedCountryData, setSelectedCountr
       <div className="world-map-viewport" aria-label="World map showing completed blood donations by country">
         <div className="world-map-zoom" style={zoomStyle}>
           <svg className="world-map-svg" viewBox="0 0 1000 520" role="img" aria-hidden="true">
+            <defs>
+              <linearGradient id="mapOcean" x1="0%" x2="100%" y1="0%" y2="100%">
+                <stop offset="0%" stopColor="#f8fbff" />
+                <stop offset="100%" stopColor="#e9f3ff" />
+              </linearGradient>
+            </defs>
             <rect className="map-ocean" x="0" y="0" width="1000" height="520" rx="22" />
+            <g className="map-grid-lines">
+              <path d="M70 135H930" />
+              <path d="M70 260H930" />
+              <path d="M70 385H930" />
+              <path d="M190 70V455" />
+              <path d="M390 70V455" />
+              <path d="M590 70V455" />
+              <path d="M790 70V455" />
+            </g>
             <path
               className="map-land"
-              d="M96 178 143 129 223 126 277 164 254 215 192 226 154 269 93 250 62 208z"
+              d="M76 186C102 132 167 93 241 108 294 119 337 158 329 206 322 247 273 250 237 282 203 313 164 311 123 287 79 262 54 232 76 186Z"
             />
-            <path className="map-land" d="M242 282 305 300 348 363 329 442 279 474 238 421 218 354z" />
             <path
               className="map-land"
-              d="M414 135 500 105 607 125 681 173 653 228 558 219 510 250 428 226 383 181z"
+              d="M250 294C292 306 336 340 348 386 362 439 319 481 278 468 246 458 230 412 222 367 217 336 224 311 250 294Z"
             />
-            <path className="map-land" d="M512 260 609 251 673 315 637 414 559 425 506 357z" />
             <path
               className="map-land"
-              d="M658 207 775 206 875 257 850 326 742 332 679 293 625 250z"
+              d="M404 164C435 119 507 98 574 118 634 136 664 178 642 212 617 248 545 228 503 246 460 264 400 237 380 200 372 185 382 175 404 164Z"
             />
-            <path className="map-land" d="M770 365 875 368 930 421 890 479 780 458 735 408z" />
-            <path className="map-land small" d="M459 88 498 75 534 95 506 119 463 113z" />
-            <path className="map-land small" d="M825 159 853 141 884 158 870 189 838 190z" />
+            <path
+              className="map-land"
+              d="M515 248C571 232 643 250 675 310 708 372 663 439 595 430 541 423 503 376 499 323 497 286 492 260 515 248Z"
+            />
+            <path
+              className="map-land"
+              d="M624 184C671 131 764 141 837 190 890 226 913 276 872 314 835 349 765 331 716 318 666 304 615 257 602 219 597 204 606 194 624 184Z"
+            />
+            <path
+              className="map-land"
+              d="M746 375C793 348 876 362 924 418 898 465 826 481 765 447 730 428 721 395 746 375Z"
+            />
+            <path className="map-land small" d="M433 87C470 70 521 75 545 102 520 124 468 124 429 109Z" />
+            <path className="map-land small" d="M824 147C852 128 891 146 887 180 858 196 827 184 814 164Z" />
+            <text className="map-continent-label" x="185" y="185">North America</text>
+            <text className="map-continent-label" x="285" y="385">South America</text>
+            <text className="map-continent-label" x="500" y="180">Europe</text>
+            <text className="map-continent-label" x="590" y="340">Africa</text>
+            <text className="map-continent-label" x="745" y="235">Asia</text>
+            <text className="map-continent-label" x="825" y="430">Australia</text>
           </svg>
 
           <div className="map-marker-layer">
@@ -2907,6 +2937,7 @@ function WorldDonationMap({ coverageData, selectedCountryData, setSelectedCountr
                     top: `${point.y}%`,
                     "--marker-size": `${size}px`,
                   }}
+                  data-side={point.labelSide || "right"}
                   type="button"
                   onClick={() => setSelectedCountry(entry.country)}
                   aria-label={`${entry.country}: ${entry.donations} completed donations`}
