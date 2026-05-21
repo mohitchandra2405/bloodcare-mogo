@@ -1268,29 +1268,29 @@ function LoginPage({
     <div className="app-shell">
       <header className="hero">
         <nav className="topbar">
-          <Brand title="BloodCare Nexus" subtitle="Secure Access Portal" badge="L" />
+          <Brand title="BloodCare Nexus" subtitle="Blood Donation Portal" badge="L" />
           <PortalNavigation currentPage={currentPage} openPage={openPage} />
         </nav>
 
         <section className="hero-grid">
           <div className="hero-copy">
-            <p className="eyebrow">Single access page</p>
-            <h1>Sign in once, then continue to the right blood bank dashboard for your role.</h1>
+            <p className="eyebrow">Blood donation access</p>
+            <h1>Donate blood, request support, and help save lives.</h1>
             <p>
-              Choose whether you are entering as a user or as an administrator. The login will take you directly to the
-              correct dashboard after authentication.
+              Choose user access to register donors or request blood support. Admin access is for reviewing urgent
+              requests, coordinating stock, and keeping donation records ready for hospitals.
             </p>
           </div>
 
           <div className="command-panel">
             <div className="command-header">
-              <span>Selected role</span>
-              <strong>{loginForm.role === "admin" ? "Admin access" : "User access"}</strong>
+              <span>Donation path</span>
+              <strong>{loginForm.role === "admin" ? "Admin review" : "Donor and request"}</strong>
             </div>
             <article className="queue-card">
               <div>
-                <strong>{loginForm.role === "admin" ? "admin" : "user"}</strong>
-                <span>Portal type</span>
+                <strong>{loginForm.role === "admin" ? "Admin" : "User"}</strong>
+                <span>Access type</span>
               </div>
               <div>
                 <p>{activeCredentials.email}</p>
@@ -1300,12 +1300,12 @@ function LoginPage({
             </article>
             <article className="queue-card">
               <div>
-                <strong>Live</strong>
-                <span>MongoDB</span>
+                <strong>Care</strong>
+                <span>Network</span>
               </div>
               <div>
-                <p>Connected blood bank data</p>
-                <small>Requests, donors, stock, and admin approvals are backed by the database.</small>
+                <p>Blood donation workflow</p>
+                <small>Donor details, blood requests, stock checks, and approvals stay organized in one system.</small>
               </div>
               <em>Ready</em>
             </article>
